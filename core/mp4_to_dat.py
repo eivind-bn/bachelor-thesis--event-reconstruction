@@ -1,4 +1,5 @@
 import os
+import sys
 
 import numpy as np
 import cv2
@@ -29,7 +30,7 @@ def mk_sliding_threshold_events(mp4_path, dat_path, threshold=0.1):
             break
 
         print(f'frame: {i}/{frame_cnt}', end='\r')
-        t = int((i / fps) * 10e6)
+        t = int((i / fps) * 1e6)
         i += 1
 
         new_states = np.mean(frame / 255, axis=2)
@@ -53,7 +54,7 @@ def mk_sliding_threshold_events(mp4_path, dat_path, threshold=0.1):
         dat_writer.write(events)
 
 
-def mp4_to_dat_v2(mp4_path, dat_path, threshold=0.1):
+def mk_stacking_events(mp4_path, dat_path, threshold=0.1):
     cap = cv2.VideoCapture(mp4_path)
 
     global old_levels
@@ -68,7 +69,7 @@ def mp4_to_dat_v2(mp4_path, dat_path, threshold=0.1):
         ret, frame = cap.read()
         old_levels = (np.mean(frame / 255, axis=2) // threshold).astype(np.int64)
 
-    timestamps = ((np.arange(frame_cnt + 1) / fps) * 10e6).astype(np.int64)
+    timestamps = ((np.arange(frame_cnt + 1) / fps) * 106).astype(np.int64)
     for i in range(frame_cnt):
         ret, frame = cap.read()
         time_a, time_b = timestamps[i:i + 2]
@@ -102,11 +103,15 @@ def mp4_to_dat_v2(mp4_path, dat_path, threshold=0.1):
         old_levels = new_levels
 
 
-def parse_args():
+def main():
     import argparse
+
+    def raise_error(error):
+        raise error
 
     parser = argparse.ArgumentParser(description='mp4-to-dat converter',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
     parser.add_argument('-i',
                         '--input-mp4-file',
                         dest='input_path',
@@ -119,33 +124,38 @@ def parse_args():
                         required=True,
                         help="Path to dat-event file")
 
-    parser.add_argument('-o',
-                        '--output-dat-file',
-                        dest='output_path',
-                        required=True,
-                        help="Path to dat-event file")
+    parser.add_argument('-em',
+                        '--event-mode',
+                        dest='event_mode',
+                        required=False,
+                        default='standard',
+                        choices=['standard', 'sliding', 'stacking'],
+                        help="Determines how event thresholds shall behave.")
 
+    parser.add_argument('-et',
+                        '--event-threshold',
+                        dest='threshold',
+                        default='0.1',
+                        type=lambda t: float(t) if 0.0 < float(t) < 1.0 else raise_error(ValueError),
+                        help='''
+                        Threshold which greyscale pixel gradients must exceed to create an event.
+                        Number is a percent factor which signifies percent of pixel brightness.
+                        For example, 0.1 means a pixel must change 10% of maximum of pixel brightness to
+                        fire an event.''')
 
-    return parser.parse_args()
+    parser = parser.parse_args()
 
+    event_mode = parser.event_mode
+    input_path = parser.input_path
+    output_path = parser.output_path
+    threshold = parser.threshold
 
-def main():
-    """ Main """
-    args = parse_args()
-
-    if not os.path.isfile(args.input_path):
-        print('Fail to access RAW file ' + args.input_path)
-        return
-
-    # Events iterator on Camera or RAW file
-    mv_iterator = EventsIterator(input_path=args.input_path, delta_t=1000)
-
-    with open('cd.csv', 'w') as csv_file:
-
-        # Read formatted CD events from EventsIterator & write to CSV
-        for evs in mv_iterator:
-            for (x, y, p, t) in evs:
-                csv_file.write("%d,%d,%d,%d\n" % (x, y, p, t))
+    if event_mode == 'standard':
+        pass
+    elif event_mode == 'stacking':
+        mk_stacking_events(input_path, output_path, threshold)
+    elif event_mode == 'sliding':
+        mk_sliding_threshold_events(input_path, output_path, threshold)
 
 
 if __name__ == "__main__":
