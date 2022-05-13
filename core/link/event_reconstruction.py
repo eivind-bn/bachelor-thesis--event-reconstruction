@@ -1,5 +1,5 @@
 import numpy as np
-from core.algorithm import Algorithm
+from core.link.module import Algorithm
 from scipy.ndimage import gaussian_filter
 
 from core.colors import WHITE
@@ -29,8 +29,6 @@ class EventIntegratorAlgorithm(Algorithm):
         self.intensity_inference = np.zeros((self.height, self.width), dtype=np.float64)
 
     def process_data(self, events: np.ndarray):
-        if events.size < 1:
-            return
 
         delta_up = np.argwhere(events['p'] == 1)
         delta_down = np.argwhere(events['p'] == 0)

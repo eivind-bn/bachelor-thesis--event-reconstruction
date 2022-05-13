@@ -129,4 +129,7 @@ dmypy.json
 .pyre/
 
 # Sample data
-samples
+samples/events/*
+samples/mp4/*
+samples/decon/*
+samples/recon/*

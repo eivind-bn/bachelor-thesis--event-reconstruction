@@ -1,9 +1,8 @@
 import os
-import sys
 
-import numpy as np
 import cv2
-from metavision_core.event_io import DatWriter, EventsIterator
+import numpy as np
+from metavision_core.event_io import DatWriter
 from numpy.core import records
 
 
@@ -69,7 +68,7 @@ def mk_stacking_events(mp4_path, dat_path, threshold=0.1):
         ret, frame = cap.read()
         old_levels = (np.mean(frame / 255, axis=2) // threshold).astype(np.int64)
 
-    timestamps = ((np.arange(frame_cnt + 1) / fps) * 106).astype(np.int64)
+    timestamps = ((np.arange(frame_cnt + 1) / fps) * 1e6).astype(np.int64)
     for i in range(frame_cnt):
         ret, frame = cap.read()
         time_a, time_b = timestamps[i:i + 2]
@@ -103,6 +102,49 @@ def mk_stacking_events(mp4_path, dat_path, threshold=0.1):
         old_levels = new_levels
 
 
+def mk_singular_events(mp4_path, dat_path, threshold=0.1):
+    cap = cv2.VideoCapture(mp4_path)
+
+    global old_levels
+
+    event_dtype = [('y', np.uint16), ('x', np.uint16), ('p', np.int16), ('t', np.int64)]
+    frame_cnt = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    height, width = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    dat_writer = DatWriter(dat_path, height, width)
+
+    if cap.isOpened():
+        ret, frame = cap.read()
+        old_levels = (np.mean(frame / 255, axis=2) // threshold).astype(np.int64)
+
+    timestamps = ((np.arange(frame_cnt + 1) / fps) * 1e6).astype(np.int64)
+    for i in range(frame_cnt):
+        ret, frame = cap.read()
+        time_a, time_b = timestamps[i:i + 2]
+
+        print(f'frame: {i}/{frame_cnt}', end='\r')
+
+        new_levels = (np.mean(frame / 255, axis=2) // threshold).astype(np.int64)
+
+        pos_cord = np.argwhere(new_levels > old_levels)
+        dec_cord = np.argwhere(new_levels < old_levels)
+
+        polarity_up = np.ones((pos_cord.shape[0], 1), dtype=np.int8)
+        polarity_down = np.zeros((dec_cord.shape[0], 1), dtype=np.int8)
+
+        time = np.full((pos_cord.shape[0] + dec_cord.shape[0],), time_b)
+
+        pos_events = np.column_stack([pos_cord, polarity_up])
+        neg_events = np.column_stack([dec_cord, polarity_down])
+
+        events = np.row_stack([pos_events, neg_events])
+        events = np.column_stack([events, time])
+
+        dat_writer.write(records.fromarrays(events.T, dtype=event_dtype))
+
+        old_levels = new_levels
+
+
 def main():
     import argparse
 
@@ -121,15 +163,15 @@ def main():
     parser.add_argument('-o',
                         '--output-dat-file',
                         dest='output_path',
-                        required=True,
+                        required=False,
                         help="Path to dat-event file")
 
     parser.add_argument('-em',
                         '--event-mode',
                         dest='event_mode',
                         required=False,
-                        default='standard',
-                        choices=['standard', 'sliding', 'stacking'],
+                        default='singular',
+                        choices=['singular', 'sliding', 'stacking'],
                         help="Determines how event thresholds shall behave.")
 
     parser.add_argument('-et',
@@ -146,12 +188,22 @@ def main():
     parser = parser.parse_args()
 
     event_mode = parser.event_mode
-    input_path = parser.input_path
+
+    input_path: str = parser.input_path
+    assert input_path.endswith('.mp4')
+
     output_path = parser.output_path
+    if output_path is None:
+        input_filename = os.path.basename(input_path)
+        input_dir = os.path.dirname(input_path)
+        output_path = f'{input_dir}/../decon/{input_filename[:-4]}.dat'
+    else:
+        assert input_path.endswith('.dat')
+
     threshold = parser.threshold
 
-    if event_mode == 'standard':
-        pass
+    if event_mode == 'singular':
+        mk_singular_events(input_path, output_path, threshold)
     elif event_mode == 'stacking':
         mk_stacking_events(input_path, output_path, threshold)
     elif event_mode == 'sliding':

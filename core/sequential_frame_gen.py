@@ -1,18 +1,18 @@
 import numpy as np
 
-from core.algorithm import Algorithm
+from core.link.module import Algorithm
 from core.colors import BLUE, WHITE, BLACK
 import time
 
 
-class PeriodicFrameGenWrapper(Algorithm):
+class SequentialFrameGenerator(Algorithm):
 
     def __init__(self, width, height, **kwargs):
         super().__init__()
         self.width = width
         self.height = height
         self.screen_buffer = np.full((height, width, 3), BLACK, dtype=np.ubyte)
-        self.frame_period_us = (1/kwargs.get('fps', 10.0))*1e6
+        self.frame_period_us = (1/kwargs.get('fps', 30.0))*1e6
         self.frame_cntr = 1
         self.t_pointer = self.frame_period_us
         self.t_mark = time.time_ns()*1e-3
@@ -44,4 +44,4 @@ class PeriodicFrameGenWrapper(Algorithm):
 
             self.t_pointer = self.frame_cntr*self.frame_period_us
             self.frame_cntr += 1
-            self.process_data(np.delete(events, frame))
+            self.process_data(events[frame.size:])
