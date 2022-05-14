@@ -1,12 +1,21 @@
 from abc import ABC, abstractmethod
 
-from core.event.broadcaster import Broadcaster
+from core.event.event_chain import EventDispatcher
+from core.event.subjects import LATE_INIT
 
 
-class Sink(ABC, object):
+class Sink(ABC, EventDispatcher):
 
     def __init__(self):
-        self.msg_dispatcher = Broadcaster()
+        super().__init__()
+        self.msg_dispatcher.subscribe(LATE_INIT, self.handle_late_init)
+
+    def handle_late_init(self, **kwargs):
+        self.late_init(**kwargs)
+        self.msg_dispatcher.unsubscribe(LATE_INIT, self.handle_late_init)
+
+    def late_init(self, **kwargs):
+        pass
 
     @abstractmethod
     def process_data(self, data, **kwargs):
@@ -16,4 +25,4 @@ class Sink(ABC, object):
         self.process_data(data, **kwargs)
 
     def __lshift__(self, provider):
-        provider.on_data_processed(self.process_data)
+        return provider.on_data_processed(self)

@@ -1,17 +1,24 @@
-from core.event.broadcaster import Broadcaster
+
+from core.event.event_chain import EventDispatcher
+from core.event.subjects import BROADCASTER_JOINED
 
 
-class Source(object):
+class Source(EventDispatcher):
 
     def __init__(self):
-        self.msg_dispatcher = Broadcaster()
-        self.callback = lambda _: {}
+        super().__init__()
+        self.callback = None
 
-    def on_data_processed(self, callback):
-        self.callback = callback
+    def on_data_processed(self, consumer):
+        self.callback = consumer
 
-    def __call__(self, callback):
-        self.on_data_processed(callback.process_data)
+        if issubclass(type(consumer), EventDispatcher):
+            self.msg_dispatcher.join(consumer.msg_dispatcher)
+            self.msg_dispatcher.notify(BROADCASTER_JOINED)
+            return consumer
+        else:
+            return self
 
     def __rshift__(self, consumer):
-        self.on_data_processed(consumer.process_data)
+        return self.on_data_processed(consumer)
+

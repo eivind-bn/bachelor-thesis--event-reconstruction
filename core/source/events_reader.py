@@ -1,9 +1,10 @@
 from metavision_core.event_io import EventsIterator
 
+from core.event.subjects import CLOSING, LATE_INIT, OPENING
 from core.source.module import Source
 
 
-class EventStream(Source):
+class EventReader(Source):
 
     def __init__(self,
                  input_path: str,
@@ -14,7 +15,6 @@ class EventStream(Source):
                  max_duration=None,
                  relative_timestamps=False,
                  **kwargs):
-
         super().__init__()
 
         self.event_iterator = EventsIterator(
@@ -28,22 +28,15 @@ class EventStream(Source):
             **kwargs
         )
 
-    def on_data_processed(self, callback):
+        self.msg_dispatcher.subscribe(OPENING, self.iterate_events)
+
+    def iterate_events(self):
         event_iterator = self.event_iterator
+        height, width = self.event_iterator.get_size()
 
-        is_lambda = isinstance(callback, type(lambda: 0))
-        if is_lambda:
-            arg_count = callback.__code__.co_argcount
-        else:
-            arg_count = callback.__call__.__code__.co_argcount - 1
+        self.msg_dispatcher.notify(LATE_INIT, height=height, width=width)
 
-        if arg_count == 3:
-            height, width = self.event_iterator.get_size()
+        for events in event_iterator:
+            self.callback(events, height=height, width=width)
 
-            for events in event_iterator:
-                callback(height, width, events)
-
-        elif arg_count == 1:
-
-            for events in event_iterator:
-                callback(events)
+        self.msg_dispatcher.notify(CLOSING)

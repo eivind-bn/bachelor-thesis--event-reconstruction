@@ -1,30 +1,26 @@
-
-class Broadcaster:
+class EventBroadcaster:
 
     def __init__(self):
         self.subscriptions = {}
-
-        self.block_dispatch = False
         self.nodes = set()
+        self.dispatch_lock = set()
 
-        self.properties = {}
+        self.key_value_store = {}
 
     def notify(self, subject, **kwargs):
-        if self.block_dispatch:
+        if subject in self.dispatch_lock:
             return
 
         callbacks = self.subscriptions.get(subject)
-        if callbacks is None:
-            return
-        else:
+        if callbacks is not None:
             for callback in callbacks:
                 callback(**kwargs)
 
-        self.block_dispatch = True
+        self.dispatch_lock.add(subject)
         for broadcaster in self.nodes:
             broadcaster.notify(subject, **kwargs)
 
-        self.block_dispatch = False
+        self.dispatch_lock.remove(subject)
 
     def subscribe(self, subject, callback):
         callbacks = self.subscriptions.get(subject)
