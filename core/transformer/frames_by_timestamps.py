@@ -37,7 +37,7 @@ class FramesByTimestamps(Transformer):
         self.frame_buffer[yi[ones], xi[ones]] = self.pos_color
 
         if frame.size < events.size:
-            self.callback(self.frame_buffer)
+            self.callback(self.frame_buffer, **kwargs)
             self.frame_buffer[:, :] = self.void_color
 
             self.t_pointer = self.frame_cntr * self.frame_period_us

@@ -52,4 +52,4 @@ class AsymptoticIntensityPredictor(Transformer):
             np.ubyte)
 
         self.screen_buffer[:, :] = np.repeat(greyscale_values[:, :, np.newaxis], 3, axis=2)
-        self.callback(self.screen_buffer)
+        self.callback(self.screen_buffer, **kwargs)

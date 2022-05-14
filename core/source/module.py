@@ -7,10 +7,17 @@ class Source(EventDispatcher):
 
     def __init__(self):
         super().__init__()
-        self.callback = None
+        self.callback = lambda data, **kwargs:None
 
     def on_data_processed(self, consumer):
-        self.callback = consumer
+        old_cb = self.callback
+        new_cb = consumer
+
+        def new_callback(data, **kwargs):
+            old_cb(data, **kwargs)
+            new_cb(data, **kwargs)
+
+        self.callback = new_callback
 
         if issubclass(type(consumer), EventDispatcher):
             self.msg_dispatcher.join(consumer.msg_dispatcher)

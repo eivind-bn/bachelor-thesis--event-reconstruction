@@ -4,7 +4,7 @@ from numpy.core import records
 from core.transformer.module import Transformer
 
 
-class Mp4ToSingularEvents(Transformer):
+class Mp4ToSlidingEvents(Transformer):
 
     def __init__(self, threshold):
         super().__init__()
@@ -24,28 +24,27 @@ class Mp4ToSingularEvents(Transformer):
         if self.frame_cnr == 0:
             self.old_levels = (np.mean(image / 255, axis=2) // self.threshold).astype(np.int64)
             self.frame_cnr += 1
+            return np.empty((0,), dtype=self.event_dtype)
 
         timestamp = (self.frame_cnr / self.fps) * 1e6
         self.frame_cnr += 1
 
-        new_levels = (np.mean(image / 255, axis=2) // self.threshold).astype(np.int64)
+        new_states = np.mean(image / 255, axis=2)
 
-        pos_cord = np.argwhere(new_levels > self.old_levels)
-        dec_cord = np.argwhere(new_levels < self.old_levels)
+        delta_up = new_states >= (self.old_levels + self.threshold)
+        delta_down = new_states <= (self.old_levels - self.threshold)
+        new_events = delta_up | delta_down
 
-        polarity_up = np.ones((pos_cord.shape[0], 1), dtype=np.int8)
-        polarity_down = np.zeros((dec_cord.shape[0], 1), dtype=np.int8)
+        self.old_levels = np.where(new_events, new_states, self.old_levels)
 
-        time = np.full((pos_cord.shape[0] + dec_cord.shape[0],), timestamp)
+        cord_up = np.argwhere(delta_up)
+        cord_down = np.argwhere(delta_down)
 
-        pos_events = np.column_stack([pos_cord, polarity_up])
-        neg_events = np.column_stack([dec_cord, polarity_down])
+        pos_events = np.column_stack([cord_up, np.ones((cord_up.shape[0],), dtype=np.int16)])
+        neg_events = np.column_stack([cord_down, np.zeros((cord_down.shape[0],), dtype=np.int16)])
 
         events = np.row_stack([pos_events, neg_events])
-        events = np.column_stack([events, time])
-
-        self.old_levels = new_levels
-
+        events = np.column_stack([events, np.full((events.shape[0],), timestamp, dtype=np.int64)])
         events = records.fromarrays(events.T, dtype=self.event_dtype)
 
         self.callback(events, **kwargs)

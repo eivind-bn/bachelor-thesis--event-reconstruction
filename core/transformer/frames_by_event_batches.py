@@ -30,6 +30,6 @@ class EventBatchToFrames(Transformer):
         self.frame_buffer[events['y'][ones], events['x'][ones]] = self.pos_color
         self.frame_buffer[events['y'][zeroes], events['x'][zeroes]] = self.neg_color
 
-        self.callback(self.frame_buffer)
+        self.callback(self.frame_buffer, **kwargs)
 
         self.frame_buffer[:, :] = self.void_color

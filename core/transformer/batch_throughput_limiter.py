@@ -21,4 +21,4 @@ class BSync(Transformer):
 
     def process_data(self, data, **kwargs):
         self.sleep_if_ahead_schedule()
-        self.callback(data)
+        self.callback(data, **kwargs)

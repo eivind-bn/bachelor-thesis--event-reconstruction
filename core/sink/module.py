@@ -23,6 +23,3 @@ class Sink(ABC, EventDispatcher):
 
     def __call__(self, data, **kwargs):
         self.process_data(data, **kwargs)
-
-    def __lshift__(self, provider):
-        return provider.on_data_processed(self)
