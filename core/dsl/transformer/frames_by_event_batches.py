@@ -24,12 +24,16 @@ class EventBatchToFrames(Transformer):
 
     def process_data(self, events, **kwargs):
 
+        # Partition event indicis based on polarity.
         ones = np.argwhere(events['p'] == 1)
         zeroes = np.argwhere(events['p'] == 0)
 
+        # Setting screen color based on polarity with the computed indicis.
         self.frame_buffer[events['y'][ones], events['x'][ones]] = self.pos_color
         self.frame_buffer[events['y'][zeroes], events['x'][zeroes]] = self.neg_color
 
+        # Transferring frame.
         self.callback(self.frame_buffer, **kwargs)
 
+        # Clearing frame-buffer.
         self.frame_buffer[:, :] = self.void_color
