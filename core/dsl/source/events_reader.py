@@ -28,26 +28,23 @@ class EventReader(Source):
             **kwargs
         )
 
+        self.closed = False
         self.message_dispatcher.subscribe(PIPELINE_READY, self.iterate_events)
 
     def iterate_events(self):
         event_iterator = self.event_iterator
         height, width = self.event_iterator.get_size()
 
-        self.message_dispatcher.notify(LATE_INIT, height=height, width=width)
-
-        self.message_dispatcher.notify(OPENING)
-
-        closed = False
-
         def stop():
-            nonlocal closed
-            closed = True
+            self.closed = True
 
-        self.message_dispatcher.subscribe(CLOSING, lambda: stop())
+        if not self.closed:
+            self.message_dispatcher.subscribe(CLOSING, lambda: stop())
+            self.message_dispatcher.notify(LATE_INIT, height=height, width=width)
+            self.message_dispatcher.notify(OPENING)
 
         for events in event_iterator:
-            if closed:
+            if self.closed:
                 break
             self.callback(events, height=height, width=width)
 

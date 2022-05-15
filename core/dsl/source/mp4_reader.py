@@ -14,6 +14,7 @@ class Mp4Reader(Source):
         self.fps = self.capture.get(cv2.CAP_PROP_FPS)
         self.height = int(self.capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.width = int(self.capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+        self.not_closed = True
 
         self.message_dispatcher.subscribe(PIPELINE_READY, self.iterate_frames)
 
@@ -26,19 +27,15 @@ class Mp4Reader(Source):
             'width': self.width
         }
 
-        self.message_dispatcher.notify(LATE_INIT, **properties)
-
-        self.message_dispatcher.notify(OPENING)
-
-        not_closed = True
-
         def stop():
-            nonlocal not_closed
-            not_closed = False
+            self.not_closed = False
 
-        self.message_dispatcher.subscribe(CLOSING, lambda: stop())
+        if self.not_closed:
+            self.message_dispatcher.notify(LATE_INIT, **properties)
+            self.message_dispatcher.notify(OPENING)
+            self.message_dispatcher.subscribe(CLOSING, lambda: stop())
 
-        while not_closed and capture.isOpened():
+        while self.not_closed and capture.isOpened():
             ret, frame = capture.read()
 
             if not ret:
