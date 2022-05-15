@@ -1,6 +1,6 @@
 import pandas as pd
 
-bgr_colors = pd.read_csv('core\\constants\\colours_rgb_shades.csv')['R;G;B Dec']\
+bgr_colors = pd.read_csv('core/constants/colours_rgb_shades.csv')['R;G;B Dec']\
     .map(lambda x: x.split(';'))\
     .map(lambda x: [int(x[2]), int(x[1]), int(x[0])])\
     .tolist()
