@@ -1,21 +1,25 @@
 
 from core.event.event_chain import EventDispatcher
-from core.event.subjects import BROADCASTER_JOINED
+from core.event.subjects import BROADCASTER_JOINED, CLOSING
 
 
 class Source(EventDispatcher):
 
     def __init__(self):
         super().__init__()
-        self.callback = lambda data, **kwargs:None
+        self.callback = lambda data, **kwargs: None
 
     def on_data_processed(self, consumer):
         old_cb = self.callback
         new_cb = consumer
 
         def new_callback(data, **kwargs):
-            old_cb(data, **kwargs)
-            new_cb(data, **kwargs)
+            try:
+                old_cb(data, **kwargs)
+                new_cb(data, **kwargs)
+            except Exception:
+                self.message_dispatcher.notify(CLOSING)
+                raise
 
         self.callback = new_callback
 

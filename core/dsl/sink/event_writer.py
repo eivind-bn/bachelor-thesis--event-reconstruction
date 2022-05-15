@@ -1,7 +1,7 @@
 from metavision_core.event_io import DatWriter
 
-from core.event.subjects import CLOSING, OPENING, BROADCASTER_JOINED
 from core.dsl.sink.module import Sink
+from core.event.subjects import CLOSING, BROADCASTER_JOINED, PIPELINE_READY
 
 
 class EventWriter(Sink):
@@ -15,8 +15,7 @@ class EventWriter(Sink):
         self.width = None
 
         self.message_dispatcher.subscribe(CLOSING, lambda: self.dat_writer.close())
-        self.message_dispatcher.subscribe(BROADCASTER_JOINED, lambda: self.message_dispatcher.notify(OPENING))
-        self.message_dispatcher.notify(OPENING)
+        self.message_dispatcher.subscribe(BROADCASTER_JOINED, lambda: self.message_dispatcher.notify(PIPELINE_READY))
 
     def late_init(self, height, width, **kwargs):
         self.dat_writer = DatWriter(self.dat_path, height, width)

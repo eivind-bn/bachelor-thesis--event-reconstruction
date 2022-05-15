@@ -1,7 +1,7 @@
 import cv2
 
 from core.constants.colors import BLACK, WHITE, BLUE
-from core.event.subjects import CLOSING, OPENING, BROADCASTER_JOINED
+from core.event.subjects import CLOSING, OPENING, BROADCASTER_JOINED, PIPELINE_READY
 from core.dsl.sink.module import Sink
 
 
@@ -24,15 +24,20 @@ class Window(Sink):
         self.neg_color = neg_color
 
         self.message_dispatcher.subscribe(OPENING, lambda: cv2.namedWindow(title))
-        self.message_dispatcher.subscribe(CLOSING, lambda: cv2.destroyWindow(title))
-        self.message_dispatcher.subscribe(BROADCASTER_JOINED, lambda: self.message_dispatcher.notify(OPENING))
+        self.message_dispatcher.subscribe(CLOSING, lambda: self.close_window())
+        self.message_dispatcher.subscribe(BROADCASTER_JOINED, lambda: self.message_dispatcher.notify(PIPELINE_READY))
 
     def late_init(self, height, width, **kwargs):
         self.height = height
         self.width = width
 
-    def process_data(self, image, **kwargs):
+    def close_window(self):
+        try:
+            cv2.destroyWindow(self.title)
+        except cv2.error:
+            pass
 
+    def process_data(self, image, **kwargs):
         if not image.shape == (self.height, self.width, 3):
             self.message_dispatcher.notify(CLOSING)
             raise TypeError

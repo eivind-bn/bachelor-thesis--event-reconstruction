@@ -1,6 +1,6 @@
 from metavision_core.event_io import EventsIterator
 
-from core.event.subjects import CLOSING, LATE_INIT, OPENING
+from core.event.subjects import CLOSING, LATE_INIT, OPENING, PIPELINE_READY
 from core.dsl.source.module import Source
 
 
@@ -28,7 +28,7 @@ class EventReader(Source):
             **kwargs
         )
 
-        self.message_dispatcher.subscribe(OPENING, self.iterate_events)
+        self.message_dispatcher.subscribe(PIPELINE_READY, self.iterate_events)
 
     def iterate_events(self):
         event_iterator = self.event_iterator
@@ -36,7 +36,19 @@ class EventReader(Source):
 
         self.message_dispatcher.notify(LATE_INIT, height=height, width=width)
 
+        self.message_dispatcher.notify(OPENING)
+
+        closed = False
+
+        def stop():
+            nonlocal closed
+            closed = True
+
+        self.message_dispatcher.subscribe(CLOSING, lambda: stop())
+
         for events in event_iterator:
+            if closed:
+                break
             self.callback(events, height=height, width=width)
 
         self.message_dispatcher.notify(CLOSING)
