@@ -65,7 +65,7 @@ def main():
         input_dir = os.path.dirname(input_path)
         output_path = f'{input_dir}/../decon/{input_filename[:-4]}.dat'
     else:
-        assert input_path.endswith('.dat')
+        assert output_path.endswith('.dat')
 
     threshold = parser.threshold
     mp4_in = Mp4Reader(input_path)
