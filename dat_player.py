@@ -43,6 +43,13 @@ def main():
     screen_buffer = np.zeros([height, width, 3], dtype=np.ubyte)
 
     cv2.namedWindow(winname, cv2.WINDOW_NORMAL)
+    print('To take a snapshot of the recording, press the \'c\' button.')
+
+    def snapshot():
+        print('Saving snapshot to:')
+        print(os.path.abspath(os.curdir))
+        cv2.imwrite('snapshot.png', screen_buffer)
+
     for events in event_stream:
         yi, xi, pi = events['y'], events['x'], events['p']
 
@@ -53,7 +60,12 @@ def main():
         screen_buffer[yi[zeros], xi[zeros]] = BLUE
 
         cv2.imshow(winname, screen_buffer)
-        cv2.pollKey()
+        key = cv2.pollKey()
+
+        if key != -1:
+            key = chr(key)
+            if key == 'c':
+                snapshot()
 
         screen_buffer[:, :] = BLACK
 
