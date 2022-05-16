@@ -6,18 +6,19 @@ from core.dsl.transformer.module import Transformer
 
 class Mp4ToStackingEvents(Transformer):
 
-    def __init__(self, threshold):
+    def __init__(self, threshold, fps=None):
         super().__init__()
 
         self.threshold = threshold
-        self.fps = None
+        self.fps = fps
 
         self.event_dtype = [('y', np.uint16), ('x', np.uint16), ('p', np.int16), ('t', np.int64)]
         self.old_levels = None
         self.frame_cnr = 0
 
-    def late_init(self, fps, **kwargs):
-        self.fps = fps
+    def late_init(self, **kwargs):
+        if self.fps is None:
+            self.fps = kwargs['fps']
 
     def process_data(self, image, **kwargs):
 
@@ -41,7 +42,7 @@ class Mp4ToStackingEvents(Transformer):
 
         # Find the intensity difference.
         grad_up = new_levels[pos_up[:, 0], pos_up[:, 1]] - self.old_levels[pos_up[:, 0], pos_up[:, 1]]
-        grad_down = new_levels[pos_down[:, 0], pos_down[:, 1]] - self.old_levels[pos_down[:, 0], pos_down[:, 1]]
+        grad_down = self.old_levels[pos_down[:, 0], pos_down[:, 1]] - new_levels[pos_down[:, 0], pos_down[:, 1]]
 
         # Look at the discrete intensity change value, and make that many event duplicates.
         pos_up = np.repeat(pos_up, grad_up, axis=0)

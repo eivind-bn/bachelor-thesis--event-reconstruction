@@ -9,15 +9,11 @@ class AsymptoticIntensityPredictor(Transformer):
 
     def __init__(self,
                  gaussian_filter_sigma=1.0,
-                 colorspace=225,
-                 colorspace_offset=0,
                  intensity_decay=0.2,
                  intensity_impedance=1.0):
         super().__init__()
 
         self.sigma = gaussian_filter_sigma
-        self.colorspace = colorspace
-        self.colorspace_offset = colorspace_offset
         self.intensity_decay = intensity_decay
         self.intensity_impedance = intensity_impedance
 
@@ -48,7 +44,7 @@ class AsymptoticIntensityPredictor(Transformer):
             self.intensity_impedance * (
                         (-1 - self.intensity_inference[events['y'][delta_down], [events['x'][delta_down]]]) / 2)
 
-        greyscale_values = ((self.intensity_inference + 1) * (self.colorspace / 2) + self.colorspace_offset).astype(
+        greyscale_values = ((self.intensity_inference + 1) * (225 / 2)).astype(
             np.ubyte)
 
         self.screen_buffer[:, :] = np.repeat(greyscale_values[:, :, np.newaxis], 3, axis=2)

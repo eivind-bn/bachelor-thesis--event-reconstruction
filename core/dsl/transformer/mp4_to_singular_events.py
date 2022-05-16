@@ -6,18 +6,19 @@ from core.dsl.transformer.module import Transformer
 
 class Mp4ToSingularEvents(Transformer):
 
-    def __init__(self, threshold):
+    def __init__(self, threshold, fps=None):
         super().__init__()
 
         self.threshold = threshold
-        self.fps = None
+        self.fps = fps
 
         self.event_dtype = [('y', np.uint16), ('x', np.uint16), ('p', np.int16), ('t', np.int64)]
         self.old_levels = None
         self.frame_cnr = 0
 
-    def late_init(self, fps, **kwargs):
-        self.fps = fps
+    def late_init(self, **kwargs):
+        if self.fps is None:
+            self.fps = kwargs['fps']
 
     def process_data(self, image, **kwargs):
 
