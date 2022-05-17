@@ -28,11 +28,11 @@ def raw(parser):
     input_file = parser.input_path
     delta_t = int(parser.delta_t)
     filename = os.path.basename(input_file)
-    event_stream = EventsIterator(input_file, delta_t)
+    event_stream = EventsIterator(input_file, delta_t=delta_t, start_ts=0)
     height, width = event_stream.get_size()
     screen_buffer = np.zeros([height, width, 3], dtype=np.ubyte)
 
-    cv2.namedWindow(filename, cv2.WINDOW_NORMAL)
+    cv2.namedWindow(filename, cv2.WINDOW_FREERATIO)
     print('To take a snapshot of the recording, press the \'c\' button.')
 
     for events in event_stream:
@@ -78,18 +78,19 @@ def to_frame(events, height, width):
 
 
 def reconstruct(parser):
+    combo = parser.render_combo
     input_file = parser.input_path
     delta_t = int(parser.delta_t)
     gaussian_filter = parser.gaussian_filter
     intensity_decay = parser.intensity_decay
     filename = os.path.basename(input_file)
-    event_stream = EventsIterator(input_file, delta_t)
+    event_stream = EventsIterator(input_file, delta_t=delta_t, start_ts=0)
     height, width = event_stream.get_size()
     reconstructor = AsymptoticIntensityPredictor(gaussian_filter, intensity_decay)
     reconstructor.late_init(height, width)
     reconstruction = np.zeros([height, width, 3], dtype=np.ubyte)
 
-    cv2.namedWindow(filename, cv2.WINDOW_NORMAL)
+    cv2.namedWindow(filename, cv2.WINDOW_FREERATIO)
     print('To take a snapshot of the recording, press the \'c\' button.')
 
     def render(data, **kwargs):
@@ -97,13 +98,22 @@ def reconstruct(parser):
         reconstruction = data
         cv2.imshow(filename, data)
 
-    reconstructor.on_data_processed(render)
+    def render_combo(data, raw, **kwargs):
+        nonlocal reconstruction
+        reconstruction = data
+        combo_frame = np.hstack([data, to_frame(raw, height, width)])
+        cv2.imshow(filename, combo_frame)
+
+    if combo:
+        reconstructor.on_data_processed(render_combo)
+    else:
+        reconstructor.on_data_processed(render)
 
     for events in event_stream:
         if events.size < 1:
             continue
 
-        reconstructor.process_data(events)
+        reconstructor.process_data(events, raw=events)
         key = cv2.pollKey()
 
         if key != -1:
@@ -161,6 +171,15 @@ def main():
                         type=float,
                         default=0.05,
                         help='Intensity decay on pixel for reconstruction')
+
+    parser.add_argument('-c',
+                        '--combo',
+                        dest='render_combo',
+                        type=bool,
+                        nargs='?',
+                        const=True,
+                        default=False,
+                        help='Render both raw a reconstruction at the same window')
 
     parser = parser.parse_args()
 
