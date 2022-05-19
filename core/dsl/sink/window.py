@@ -1,7 +1,7 @@
 import cv2
 
 from core.constants.colors import BLACK, WHITE, BLUE
-from core.event.subjects import CLOSING, OPENING, BROADCASTER_JOINED, PIPELINE_READY
+from core.event.subjects import CLOSING, OPENING, BROADCASTER_JOINED, PIPELINE_READY, KEYPRESS
 from core.dsl.sink.module import Sink
 
 
@@ -51,4 +51,4 @@ class Window(Sink):
 
         keypress = cv2.pollKey()
         if keypress != -1:
-            self.message_dispatcher.notify('keypress', key=chr(keypress))
+            self.message_dispatcher.notify(KEYPRESS, key=chr(keypress))
