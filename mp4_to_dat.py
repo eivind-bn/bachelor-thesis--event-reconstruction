@@ -1,10 +1,5 @@
 import os
 
-import cv2
-import numpy as np
-from metavision_core.event_io import DatWriter
-from numpy.core import records
-
 from core.dsl.sink.event_writer import EventWriter
 from core.dsl.source.mp4_reader import Mp4Reader
 from core.dsl.transformer.mp4_to_singular_events import Mp4ToSingularEvents
