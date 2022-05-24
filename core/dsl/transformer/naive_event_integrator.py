@@ -20,7 +20,7 @@ class SpanningIntensityPredictor(Transformer):
         self.state_cnt = np.zeros((height, width), dtype=np.int64)
 
     def process_data(self, events, **kwargs):
-        gaussian_filter(self.state_cnt, self.sigma)
+        self.state_cnt = gaussian_filter(self.state_cnt, self.sigma)
 
         pos_events = np.argwhere(events['p'] == 1)
         neg_events = np.argwhere(events['p'] == 0)

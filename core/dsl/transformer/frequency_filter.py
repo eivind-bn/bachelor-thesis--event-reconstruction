@@ -18,6 +18,8 @@ class FrequencyFilter(Transformer):
         self.last_timestamp = np.zeros((height, width), dtype=np.int64)
 
     def process_data(self, events, **kwargs):
+        if events.size < 1:
+            return
 
         yi, xi, ti = events['y'], events['x'], events['t']
 
@@ -33,7 +35,7 @@ class FrequencyFilter(Transformer):
 
         filtered = np.argwhere(np.logical_and(self.low_bound < freq_norm, freq_norm < self.high_bound))
 
-        self.callback(events[filtered])
+        self.callback(np.array(events[filtered], dtype=events.dtype))
 
         self.last_timestamp = new_time
 
